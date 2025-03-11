@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Tekenapplicatie.Data;
+using WebApp.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 

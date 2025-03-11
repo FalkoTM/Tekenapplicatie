@@ -19,4 +19,9 @@
         <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.10"/>
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Views\Canvas\" />
+      <Folder Include="Views\Group\" />
+    </ItemGroup>
+
 </Project>

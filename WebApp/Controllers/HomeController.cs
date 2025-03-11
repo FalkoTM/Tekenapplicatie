@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using Tekenapplicatie.Models;
+using WebApp.Models;
 
-namespace Tekenapplicatie.Controllers;
+namespace WebApp.Controllers;
 
 public class HomeController : Controller
 {
