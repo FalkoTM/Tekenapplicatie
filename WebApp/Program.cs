@@ -1,3 +1,6 @@
+using Microsoft.EntityFrameworkCore;
+using WebApp.Data;
+
 namespace Program
 {
     public class Program
@@ -8,7 +11,11 @@ namespace Program
 
             // Add services to the container.
             builder.Services.AddControllersWithViews();
-            
+
+            // Register ApplicationDbContext with SQLite
+            builder.Services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.

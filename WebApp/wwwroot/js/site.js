@@ -17,6 +17,7 @@
     toolbar.addEventListener('click', e => {
         if (e.target.id === 'clear') {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            saveDrawing(); // Save the cleared canvas
         }
     });
 
@@ -41,6 +42,38 @@
     canvas.addEventListener('mouseup', () => {
         isPainting = false;
         ctx.beginPath();
+        saveDrawing(); // Save the drawing after each stroke
     });
     canvas.addEventListener('mousemove', draw);
+
+    // Save drawing to the database
+    function saveDrawing() {
+        const drawingData = canvas.toDataURL(); // Convert canvas to base64 image
+        fetch('/api/drawing/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ DrawingData: drawingData }),
+        })
+            .then(response => response.json())
+            .then(data => console.log(data.message))
+            .catch(error => console.error('Error saving drawing:', error));
+    }
+
+    // Load the latest drawing from the database
+    function loadLatestDrawing() {
+        fetch('/api/drawing/latest')
+            .then(response => response.json())
+            .then(data => {
+                if (data.drawingData) {
+                    const img = new Image();
+                    img.src = data.drawingData;
+                    img.onload = () => ctx.drawImage(img, 0, 0);
+                }
+            })
+            .catch(error => console.error('Error loading drawing:', error));
+    }
+
+    loadLatestDrawing(); // Load the latest drawing on page load
 });

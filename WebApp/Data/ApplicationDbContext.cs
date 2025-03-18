@@ -1,10 +1,15 @@
-﻿
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using WebApp.Models;
 
-namespace WebApp.Data;
-
-public class ApplicationDbContext : IdentityDbContext
+namespace WebApp.Data
 {
+    public class ApplicationDbContext : DbContext
+    {
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+            : base(options)
+        {
+        }
 
+        public DbSet<DrawingModel> Drawings { get; set; }
+    }
 }
