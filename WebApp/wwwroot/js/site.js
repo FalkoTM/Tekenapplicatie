@@ -3,17 +3,33 @@
     const ctx = canvas.getContext('2d');
     const toolbar = document.getElementById('toolbar');
 
-    function resizeCanvas() {
-        canvas.width = window.innerWidth - toolbar.offsetWidth;
-        canvas.height = window.innerHeight;
-    }
-
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-
     let isPainting = false;
     let lineWidth = 5;
 
+    // Store the current drawing as an image
+    let currentDrawing = new Image();
+
+    // Function to resize the canvas
+    function resizeCanvas() {
+        // Save the current canvas content as an image
+        const imageData = canvas.toDataURL();
+
+        // Resize the canvas
+        canvas.width = window.innerWidth - toolbar.offsetWidth;
+        canvas.height = window.innerHeight;
+
+        // Redraw the saved image onto the resized canvas
+        currentDrawing.src = imageData;
+        currentDrawing.onload = () => {
+            ctx.drawImage(currentDrawing, 0, 0);
+        };
+    }
+
+    // Event listener for window resize
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas(); // Initial canvas resize
+
+    // Toolbar event listeners
     toolbar.addEventListener('click', e => {
         if (e.target.id === 'clear') {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -30,6 +46,7 @@
         }
     });
 
+    // Drawing logic
     const draw = (e) => {
         if (!isPainting) return;
         ctx.lineWidth = lineWidth;
@@ -75,5 +92,5 @@
             .catch(error => console.error('Error loading drawing:', error));
     }
 
-    loadLatestDrawing(); // Load the latest drawing on page load
+    loadLatestDrawing();
 });
