@@ -89,6 +89,40 @@ namespace WebApp.Controllers
                 _semaphore.Release(); // Release the semaphore
             }
         }
+        
+        // Redo the most recent deleted drawing
+        [HttpPost("redo")]
+        public async Task<IActionResult> Redo()
+        {
+            await _semaphore.WaitAsync(); // Lock the semaphore
+            try
+            {
+                // Get the most recent deleted drawing
+                var latestDeletedDrawing = await _context.DeletedDrawings
+                    .OrderByDescending(d => d.DeletedAt)
+                    .FirstOrDefaultAsync();
+
+                if (latestDeletedDrawing == null)
+                    return NotFound("No drawings to redo.");
+
+                // Move the drawing back to the Drawings table
+                var redoDrawing = new DrawingModel
+                {
+                    DrawingData = latestDeletedDrawing.DrawingData,
+                    CreatedAt = latestDeletedDrawing.CreatedAt
+                };
+
+                _context.Drawings.Add(redoDrawing);
+                _context.DeletedDrawings.Remove(latestDeletedDrawing);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Drawing redone successfully!", drawing = redoDrawing });
+            }
+            finally
+            {
+                _semaphore.Release(); // Release the semaphore
+            }
+        }
 
         // Get latest drawing
         [HttpGet("latest")]

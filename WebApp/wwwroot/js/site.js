@@ -36,6 +36,8 @@
             saveDrawing(); // Save the cleared canvas
         } else if (e.target.id === 'undo') {
             undo();
+        } else if (e.target.id === 'redo') {
+            redo();
         }
     });
 
@@ -103,6 +105,25 @@
                 console.log(data.message);
             })
             .catch(error => console.error('Error undoing drawing:', error));
+    }
+
+    // Redo functionality
+    function redo() {
+        fetch('/api/drawing/redo', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.drawing) {
+                    // Load the redone drawing
+                    loadLatestDrawing();
+                }
+                console.log(data.message);
+            })
+            .catch(error => console.error('Error redoing drawing:', error));
     }
 
     // Load the latest drawing from the database
