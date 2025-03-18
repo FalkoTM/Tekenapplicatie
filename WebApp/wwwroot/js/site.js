@@ -29,11 +29,13 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas(); // Initial canvas resize
 
-    // Toolbar event listeners
+    // Button event listeners
     toolbar.addEventListener('click', e => {
         if (e.target.id === 'clear') {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             saveDrawing(); // Save the cleared canvas
+        } else if (e.target.id === 'undo') {
+            undo();
         }
     });
 
@@ -55,12 +57,18 @@
         ctx.stroke();
     }
 
-    canvas.addEventListener('mousedown', () => isPainting = true);
-    canvas.addEventListener('mouseup', () => {
-        isPainting = false;
-        ctx.beginPath();
-        saveDrawing(); // Save the drawing after each stroke
+    canvas.addEventListener('mousedown', () => {
+        isPainting = true;
+        ctx.beginPath(); // Start a new path when the user starts drawing
     });
+
+    canvas.addEventListener('mouseup', () => {
+        if (isPainting) {
+            isPainting = false;
+            saveDrawing(); // Save the drawing only when the stroke ends
+        }
+    });
+
     canvas.addEventListener('mousemove', draw);
 
     // Save drawing to the database
@@ -78,6 +86,25 @@
             .catch(error => console.error('Error saving drawing:', error));
     }
 
+    // Undo functionality
+    function undo() {
+        fetch('/api/drawing/undo', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.drawing) {
+                    // Load the previous drawing (if any)
+                    loadLatestDrawing();
+                }
+                console.log(data.message);
+            })
+            .catch(error => console.error('Error undoing drawing:', error));
+    }
+
     // Load the latest drawing from the database
     function loadLatestDrawing() {
         fetch('/api/drawing/latest')
@@ -86,11 +113,14 @@
                 if (data.drawingData) {
                     const img = new Image();
                     img.src = data.drawingData;
-                    img.onload = () => ctx.drawImage(img, 0, 0);
+                    img.onload = () => {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+                    };
                 }
             })
             .catch(error => console.error('Error loading drawing:', error));
     }
 
-    loadLatestDrawing();
+    loadLatestDrawing(); // Load the latest drawing on page load
 });

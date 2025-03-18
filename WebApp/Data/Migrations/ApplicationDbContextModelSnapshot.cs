@@ -34,6 +34,27 @@ namespace WebApp.Data.Migrations
 
                     b.ToTable("Drawings");
                 });
+
+            modelBuilder.Entity("WebApp.Models.UndoneDrawingModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DeletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DrawingData")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DeletedDrawings");
+                });
 #pragma warning restore 612, 618
         }
     }
