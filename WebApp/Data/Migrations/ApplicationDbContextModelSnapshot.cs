@@ -17,25 +17,7 @@ namespace WebApp.Data.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.10");
 
-            modelBuilder.Entity("WebApp.Models.DrawingModel", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DrawingData")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Drawings");
-                });
-
-            modelBuilder.Entity("WebApp.Models.UndoneDrawingModel", b =>
+            modelBuilder.Entity("WebApp.Models.DeletedDrawingModel", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -47,13 +29,31 @@ namespace WebApp.Data.Migrations
                     b.Property<DateTime>("DeletedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("DrawingData")
+                    b.Property<string>("GeoJSON")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
                     b.ToTable("DeletedDrawings");
+                });
+
+            modelBuilder.Entity("WebApp.Models.DrawingModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GeoJSON")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Drawings");
                 });
 #pragma warning restore 612, 618
         }

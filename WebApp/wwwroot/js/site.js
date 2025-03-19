@@ -5,27 +5,27 @@
 
     let isPainting = false;
     let lineWidth = 5;
-    
-    // Store the current drawing as an image
-    let currentDrawing = new Image();
+
+    // Store the current stroke as a GeoJSON object
+    let currentStroke = {
+        type: "Feature",
+        properties: {
+            userId: "user123", // Replace with the actual user ID
+            color: ctx.strokeStyle,
+            lineWidth: ctx.lineWidth
+        },
+        geometry: {
+            type: "LineString",
+            coordinates: [] // Array of [x, y] coordinates
+        }
+    };
 
     // Function to resize the canvas
     function resizeCanvas() {
-        // Save the current canvas content as an image
-        const imageData = canvas.toDataURL();
-
-        // Resize the canvas
         canvas.width = window.innerWidth - toolbar.offsetWidth;
         canvas.height = window.innerHeight;
-
-        // Redraw the saved image onto the resized canvas
-        currentDrawing.src = imageData;
-        currentDrawing.onload = () => {
-            ctx.drawImage(currentDrawing, 0, 0);
-        };
     }
 
-    // Event listener for window resize
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas(); // Initial canvas resize
 
@@ -57,35 +57,55 @@
         ctx.lineCap = 'round';
         ctx.lineTo(e.clientX - toolbar.offsetWidth, e.clientY);
         ctx.stroke();
+        currentStroke.geometry.coordinates.push([e.clientX - toolbar.offsetWidth, e.clientY]);
     }
 
-    canvas.addEventListener('mousedown', () => {
+    canvas.addEventListener('mousedown', (e) => {
         isPainting = true;
-        ctx.beginPath(); // Start a new path when the user starts drawing
+        ctx.beginPath();
+        ctx.moveTo(e.clientX - toolbar.offsetWidth, e.clientY);
+        currentStroke.geometry.coordinates.push([e.clientX - toolbar.offsetWidth, e.clientY]);
     });
 
     canvas.addEventListener('mouseup', () => {
         if (isPainting) {
             isPainting = false;
-            saveDrawing();
+            saveStroke(currentStroke); // Save the stroke as GeoJSON
+            currentStroke = {
+                type: "Feature",
+                properties: {
+                    userId: "user123", // Replace with the actual user ID
+                    color: ctx.strokeStyle,
+                    lineWidth: ctx.lineWidth
+                },
+                geometry: {
+                    type: "LineString",
+                    coordinates: []
+                }
+            };
         }
     });
 
     canvas.addEventListener('mousemove', draw);
 
-    // Save drawing to the database
-    function saveDrawing() {
-        const drawingData = canvas.toDataURL(); // Convert canvas to base64 image
+    // Save stroke to the database
+    function saveStroke(stroke) {
+        const drawingData = {
+            GeoJSON: JSON.stringify(stroke) // Ensure the GeoJSON object is stringified
+        };
+
+        console.log("Saving stroke:", drawingData); // Log the data being sent
+
         fetch('/api/drawing/save', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ DrawingData: drawingData }),
+            body: JSON.stringify(drawingData), // Send the drawing data as JSON
         })
             .then(response => response.json())
             .then(data => console.log(data.message))
-            .catch(error => console.error('Error saving drawing:', error));
+            .catch(error => console.error('Error saving stroke:', error));
     }
 
     // Undo functionality
@@ -126,22 +146,41 @@
             .catch(error => console.error('Error redoing drawing:', error));
     }
 
-    // Load the latest drawing from the database
+    // Load the latest drawings from the database
     function loadLatestDrawing() {
         fetch('/api/drawing/latest')
             .then(response => response.json())
             .then(data => {
-                if (data.drawingData) {
-                    const img = new Image();
-                    img.src = data.drawingData;
-                    img.onload = () => {
-                        ctx.clearRect(0, 0, canvas.width, canvas.height);
-                        ctx.drawImage(img, 0, 0);
-                    };
+                console.log("Received drawings from backend:", data); // Log the received data
+                if (data && data.length > 0) {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    data.forEach(drawing => {
+                        const stroke = JSON.parse(drawing.geoJSON); // Parse the GeoJSON string
+                        renderStroke(stroke);
+                    });
                 }
             })
-            .catch(error => console.error('Error loading drawing:', error));
+            .catch(error => console.error('Error loading drawings:', error));
     }
 
-    loadLatestDrawing(); // Load the latest drawing on page load
+    // Render a stroke on the canvas
+    function renderStroke(stroke) {
+        console.log("Rendering stroke:", stroke); // Log the stroke being rendered
+        ctx.strokeStyle = stroke.properties.color;
+        ctx.lineWidth = stroke.properties.lineWidth;
+        ctx.beginPath();
+
+        stroke.geometry.coordinates.forEach((point, index) => {
+            const [x, y] = point;
+            if (index === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
+
+        ctx.stroke();
+    }
+
+    loadLatestDrawing(); // Load the latest drawings on page load
 });

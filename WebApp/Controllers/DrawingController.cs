@@ -63,13 +63,31 @@ namespace WebApp.Controllers
             await _semaphore.WaitAsync(); // Lock the semaphore
             try
             {
+                // Log the incoming data
+                Console.WriteLine("Received drawing data:");
+                Console.WriteLine($"GeoJSON: {drawing.GeoJSON}");
+                Console.WriteLine($"CreatedAt: {drawing.CreatedAt}");
+
+                // Ensure the GeoJSON property is not null or empty
+                if (string.IsNullOrEmpty(drawing.GeoJSON))
+                {
+                    return BadRequest("GeoJSON data is required.");
+                }
+
                 // Add the new drawing to the database
                 _context.Drawings.Add(drawing);
                 await _context.SaveChangesAsync();
-                
+
+                // Ensure the Drawings table does not exceed 20 items
                 await EnsureDrawingsLimit();
 
                 return Ok(new { message = "Drawing saved successfully!" });
+            }
+            catch (Exception ex)
+            {
+                // Log any errors
+                Console.WriteLine($"Error saving drawing: {ex.Message}");
+                return StatusCode(500, $"An error occurred: {ex.Message}");
             }
             finally
             {
@@ -95,7 +113,7 @@ namespace WebApp.Controllers
                 // Move the drawing to the DeletedDrawings table
                 var deletedDrawing = new DeletedDrawingModel
                 {
-                    DrawingData = latestDrawing.DrawingData,
+                    GeoJSON = latestDrawing.GeoJSON,
                     CreatedAt = latestDrawing.CreatedAt,
                     DeletedAt = DateTime.UtcNow
                 };
@@ -103,7 +121,8 @@ namespace WebApp.Controllers
                 _context.DeletedDrawings.Add(deletedDrawing);
                 _context.Drawings.Remove(latestDrawing);
                 await _context.SaveChangesAsync();
-                
+
+                // Ensure the DeletedDrawings table does not exceed 20 items
                 await EnsureDeletedDrawingsLimit();
 
                 return Ok(new { message = "Drawing undone successfully!", drawing = latestDrawing });
@@ -132,14 +151,15 @@ namespace WebApp.Controllers
                 // Move the drawing back to the Drawings table
                 var redoDrawing = new DrawingModel
                 {
-                    DrawingData = latestDeletedDrawing.DrawingData,
+                    GeoJSON = latestDeletedDrawing.GeoJSON,
                     CreatedAt = latestDeletedDrawing.CreatedAt
                 };
 
                 _context.Drawings.Add(redoDrawing);
                 _context.DeletedDrawings.Remove(latestDeletedDrawing);
                 await _context.SaveChangesAsync();
-                
+
+                // Ensure the Drawings table does not exceed 20 items
                 await EnsureDrawingsLimit();
 
                 return Ok(new { message = "Drawing redone successfully!", drawing = redoDrawing });
@@ -150,18 +170,16 @@ namespace WebApp.Controllers
             }
         }
 
-        // Get latest drawing
+        // Get latest drawings
         [HttpGet("latest")]
-        public async Task<IActionResult> GetLatestDrawing()
+        public async Task<IActionResult> GetLatestDrawings()
         {
-            var latestDrawing = await _context.Drawings
+            var drawings = await _context.Drawings
                 .OrderByDescending(d => d.CreatedAt)
-                .FirstOrDefaultAsync();
+                .Take(20) // Retrieve the latest 20 drawings
+                .ToListAsync();
 
-            if (latestDrawing == null)
-                return NotFound("No drawings found.");
-
-            return Ok(latestDrawing);
+            return Ok(drawings);
         }
     }
 }

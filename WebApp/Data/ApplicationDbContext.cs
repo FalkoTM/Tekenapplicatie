@@ -11,6 +11,6 @@ namespace WebApp.Data
         }
 
         public DbSet<DrawingModel> Drawings { get; set; }
-        public DbSet<DeletedDrawingModel> DeletedDrawings { get; set; } // New table for deleted drawings
+        public DbSet<DeletedDrawingModel> DeletedDrawings { get; set; }
     }
 }
