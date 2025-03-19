@@ -20,6 +20,42 @@ namespace WebApp.Controllers
             _context = context;
         }
 
+        // Helper function to ensure no more than 20 items in the Drawings table
+        private async Task EnsureDrawingsLimit()
+        {
+            var totalDrawings = await _context.Drawings.CountAsync();
+            if (totalDrawings > 20)
+            {
+                var oldestDrawing = await _context.Drawings
+                    .OrderBy(d => d.CreatedAt)
+                    .FirstOrDefaultAsync();
+
+                if (oldestDrawing != null)
+                {
+                    _context.Drawings.Remove(oldestDrawing);
+                    await _context.SaveChangesAsync();
+                }
+            }
+        }
+
+        // Helper function to ensure no more than 20 items in the DeletedDrawings table
+        private async Task EnsureDeletedDrawingsLimit()
+        {
+            var totalDeletedDrawings = await _context.DeletedDrawings.CountAsync();
+            if (totalDeletedDrawings > 20)
+            {
+                var oldestDeletedDrawing = await _context.DeletedDrawings
+                    .OrderBy(d => d.DeletedAt)
+                    .FirstOrDefaultAsync();
+
+                if (oldestDeletedDrawing != null)
+                {
+                    _context.DeletedDrawings.Remove(oldestDeletedDrawing);
+                    await _context.SaveChangesAsync();
+                }
+            }
+        }
+
         // Save drawing
         [HttpPost("save")]
         public async Task<IActionResult> SaveDrawing([FromBody] DrawingModel drawing)
@@ -30,23 +66,8 @@ namespace WebApp.Controllers
                 // Add the new drawing to the database
                 _context.Drawings.Add(drawing);
                 await _context.SaveChangesAsync();
-
-                // Get the total number of drawings
-                var totalDrawings = await _context.Drawings.CountAsync();
-
-                // If there are more than 20 drawings, delete the oldest one
-                if (totalDrawings > 20)
-                {
-                    var oldestDrawing = await _context.Drawings
-                        .OrderBy(d => d.CreatedAt)
-                        .FirstOrDefaultAsync();
-
-                    if (oldestDrawing != null)
-                    {
-                        _context.Drawings.Remove(oldestDrawing);
-                        await _context.SaveChangesAsync();
-                    }
-                }
+                
+                await EnsureDrawingsLimit();
 
                 return Ok(new { message = "Drawing saved successfully!" });
             }
@@ -75,12 +96,15 @@ namespace WebApp.Controllers
                 var deletedDrawing = new DeletedDrawingModel
                 {
                     DrawingData = latestDrawing.DrawingData,
-                    CreatedAt = latestDrawing.CreatedAt
+                    CreatedAt = latestDrawing.CreatedAt,
+                    DeletedAt = DateTime.UtcNow
                 };
 
                 _context.DeletedDrawings.Add(deletedDrawing);
                 _context.Drawings.Remove(latestDrawing);
                 await _context.SaveChangesAsync();
+                
+                await EnsureDeletedDrawingsLimit();
 
                 return Ok(new { message = "Drawing undone successfully!", drawing = latestDrawing });
             }
@@ -89,7 +113,7 @@ namespace WebApp.Controllers
                 _semaphore.Release(); // Release the semaphore
             }
         }
-        
+
         // Redo the most recent deleted drawing
         [HttpPost("redo")]
         public async Task<IActionResult> Redo()
@@ -115,6 +139,8 @@ namespace WebApp.Controllers
                 _context.Drawings.Add(redoDrawing);
                 _context.DeletedDrawings.Remove(latestDeletedDrawing);
                 await _context.SaveChangesAsync();
+                
+                await EnsureDrawingsLimit();
 
                 return Ok(new { message = "Drawing redone successfully!", drawing = redoDrawing });
             }

@@ -5,7 +5,7 @@
 
     let isPainting = false;
     let lineWidth = 5;
-
+    
     // Store the current drawing as an image
     let currentDrawing = new Image();
 
@@ -67,7 +67,7 @@
     canvas.addEventListener('mouseup', () => {
         if (isPainting) {
             isPainting = false;
-            saveDrawing(); // Save the drawing only when the stroke ends
+            saveDrawing();
         }
     });
 
