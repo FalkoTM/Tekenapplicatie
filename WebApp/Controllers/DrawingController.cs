@@ -21,10 +21,10 @@ namespace WebApp.Controllers
         }
 
         // Helper function to ensure no more than 20 items in the Drawings table
-        private async Task EnsureDrawingsLimit()
+        private async Task EnsureDrawingsLimit(int drawinglimit)
         {
             var totalDrawings = await _context.Drawings.CountAsync();
-            if (totalDrawings > 20)
+            if (totalDrawings > drawinglimit)
             {
                 var oldestDrawing = await _context.Drawings
                     .OrderBy(d => d.CreatedAt)
@@ -39,10 +39,10 @@ namespace WebApp.Controllers
         }
 
         // Helper function to ensure no more than 20 items in the DeletedDrawings table
-        private async Task EnsureDeletedDrawingsLimit()
+        private async Task EnsureDeletedDrawingsLimit(int drawinglimit)
         {
             var totalDeletedDrawings = await _context.DeletedDrawings.CountAsync();
-            if (totalDeletedDrawings > 20)
+            if (totalDeletedDrawings > drawinglimit)
             {
                 var oldestDeletedDrawing = await _context.DeletedDrawings
                     .OrderBy(d => d.DeletedAt)
@@ -78,8 +78,8 @@ namespace WebApp.Controllers
                 _context.Drawings.Add(drawing);
                 await _context.SaveChangesAsync();
 
-                // Ensure the Drawings table does not exceed 20 items
-                await EnsureDrawingsLimit();
+                // Ensure the Drawings table does not exceed 2000 items
+                // await EnsureDrawingsLimit(2000);
 
                 return Ok(new { message = "Drawing saved successfully!" });
             }
@@ -122,8 +122,8 @@ namespace WebApp.Controllers
                 _context.Drawings.Remove(latestDrawing);
                 await _context.SaveChangesAsync();
 
-                // Ensure the DeletedDrawings table does not exceed 20 items
-                await EnsureDeletedDrawingsLimit();
+                // Ensure the DeletedDrawings table does not exceed 2000 items
+                await EnsureDeletedDrawingsLimit(2000);
 
                 return Ok(new { message = "Drawing undone successfully!", drawing = latestDrawing });
             }
@@ -159,8 +159,8 @@ namespace WebApp.Controllers
                 _context.DeletedDrawings.Remove(latestDeletedDrawing);
                 await _context.SaveChangesAsync();
 
-                // Ensure the Drawings table does not exceed 20 items
-                await EnsureDrawingsLimit();
+                // Ensure the Drawings table does not exceed 2000 items
+                // await EnsureDrawingsLimit(2000);
 
                 return Ok(new { message = "Drawing redone successfully!", drawing = redoDrawing });
             }
@@ -176,7 +176,7 @@ namespace WebApp.Controllers
         {
             var drawings = await _context.Drawings
                 .OrderByDescending(d => d.CreatedAt)
-                .Take(20) // Retrieve the latest 20 drawings
+                .Take(2000) // Retrieve the latest 2000 drawings
                 .ToListAsync();
 
             return Ok(drawings);

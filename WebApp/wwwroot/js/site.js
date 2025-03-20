@@ -63,9 +63,24 @@
     canvas.addEventListener('mousedown', (e) => {
         isPainting = true;
         ctx.beginPath();
+        ctx.lineWidth = lineWidth;  // Zorg ervoor dat de lijnbreedte correct is ingesteld
         ctx.moveTo(e.clientX - toolbar.offsetWidth, e.clientY);
-        currentStroke.geometry.coordinates.push([e.clientX - toolbar.offsetWidth, e.clientY]);
+
+        // Maak een nieuw GeoJSON-object met de juiste instellingen
+        currentStroke = {
+            type: "Feature",
+            properties: {
+                userId: "user123",
+                color: ctx.strokeStyle,
+                lineWidth: lineWidth // Gebruik de juiste lijnbreedte
+            },
+            geometry: {
+                type: "LineString",
+                coordinates: [[e.clientX - toolbar.offsetWidth, e.clientY]]
+            }
+        };
     });
+
 
     canvas.addEventListener('mouseup', () => {
         if (isPainting) {
