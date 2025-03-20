@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WebApp.Data;
+using WebApp.Hubs;
 
 namespace Program
 {
@@ -11,6 +12,7 @@ namespace Program
             
             // Add services to the container.
             builder.Services.AddControllersWithViews();
+            builder.Services.AddSignalR();
             
             // Register ApplicationDbContext with SQLite
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -36,6 +38,8 @@ namespace Program
             app.MapControllerRoute(
                 name: "default",
                 pattern: "{controller=Home}/{action=Index}/{id?}");
+            
+            app.MapHub<DrawingHub>("/drawingHub");
             
             app.Run();
         }

@@ -6,6 +6,22 @@
     let isPainting = false;
     let lineWidth = 5;
 
+    // Initialize SignalR connection
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/drawingHub")
+        .build();
+
+    // Start the SignalR connection
+    connection.start()
+        .then(() => console.log("SignalR connection established."))
+        .catch(err => console.error("SignalR connection error:", err));
+
+    // Listen for incoming strokes
+    connection.on("ReceiveStroke", (strokeJson) => {
+        const stroke = JSON.parse(strokeJson);
+        renderStroke(stroke);
+    });
+
     // Store the current stroke as a GeoJSON object
     let currentStroke = {
         type: "Feature",
@@ -19,21 +35,32 @@
             coordinates: [] // Array of [x, y] coordinates
         }
     };
-
+    
     // Function to resize the canvas
     function resizeCanvas() {
+        // Save the current canvas content as an image
+        const imageData = canvas.toDataURL();
+
+        // Resize the canvas
         canvas.width = window.innerWidth - toolbar.offsetWidth;
         canvas.height = window.innerHeight;
+
+        // Redraw the saved image onto the resized canvas
+        const img = new Image();
+        img.src = imageData;
+        img.onload = () => {
+            ctx.drawImage(img, 0, 0);
+        };
     }
 
     window.addEventListener('resize', resizeCanvas);
-    resizeCanvas(); // Initial canvas resize
+    resizeCanvas();
 
     // Button event listeners
     toolbar.addEventListener('click', e => {
         if (e.target.id === 'clear') {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            saveDrawing(); // Save the cleared canvas
+            saveDrawing();
         } else if (e.target.id === 'undo') {
             undo();
         } else if (e.target.id === 'redo') {
@@ -103,7 +130,7 @@
 
     canvas.addEventListener('mousemove', draw);
 
-    // Save stroke to the database
+    // Save stroke to the database and broadcast via SignalR
     function saveStroke(stroke) {
         const drawingData = {
             GeoJSON: JSON.stringify(stroke) // Ensure the GeoJSON object is stringified
@@ -119,7 +146,12 @@
             body: JSON.stringify(drawingData), // Send the drawing data as JSON
         })
             .then(response => response.json())
-            .then(data => console.log(data.message))
+            .then(data => {
+                console.log(data.message);
+                // Broadcast the stroke to all clients via SignalR
+                connection.invoke("SendStroke", drawingData.GeoJSON)
+                    .catch(err => console.error("Error broadcasting stroke:", err));
+            })
             .catch(error => console.error('Error saving stroke:', error));
     }
 
