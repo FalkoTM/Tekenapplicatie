@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using WebApp.Data;
-using WebApp.Hubs;
 
 namespace Program
 {

@@ -5,6 +5,7 @@
 
     let isPainting = false;
     let lineWidth = 5;
+    let strokes = []; // Store drawn strokes
 
     // Initialize SignalR connection
     const connection = new signalR.HubConnectionBuilder()
@@ -38,20 +39,29 @@
     
     // Function to resize the canvas
     function resizeCanvas() {
-        // Save the current canvas content as an image
+        // Bewaar huidige kleur en lijnbreedte
+        const currentStrokeStyle = ctx.strokeStyle;
+        const currentLineWidth = ctx.lineWidth;
+
+        // Sla de huidige afbeelding op
         const imageData = canvas.toDataURL();
 
-        // Resize the canvas
+        // Pas de grootte van het canvas aan
         canvas.width = window.innerWidth - toolbar.offsetWidth;
         canvas.height = window.innerHeight;
 
-        // Redraw the saved image onto the resized canvas
+        // Herstel de kleur en lijnbreedte
+        ctx.strokeStyle = currentStrokeStyle;
+        ctx.lineWidth = currentLineWidth;
+
+        // Herstel de getekende inhoud
         const img = new Image();
         img.src = imageData;
         img.onload = () => {
             ctx.drawImage(img, 0, 0);
         };
     }
+
 
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
@@ -132,48 +142,45 @@
 
     // Save stroke to the database and broadcast via SignalR
     function saveStroke(stroke) {
-        const drawingData = {
-            GeoJSON: JSON.stringify(stroke) // Ensure the GeoJSON object is stringified
-        };
+        strokes.push(stroke); // Store the stroke locally
 
-        console.log("Saving stroke:", drawingData); // Log the data being sent
+        const drawingData = { GeoJSON: JSON.stringify(stroke) };
 
         fetch('/api/drawing/save', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(drawingData), // Send the drawing data as JSON
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(drawingData),
         })
             .then(response => response.json())
-            .then(data => {
-                console.log(data.message);
-                // Broadcast the stroke to all clients via SignalR
+            .then(() => {
                 connection.invoke("SendStroke", drawingData.GeoJSON)
                     .catch(err => console.error("Error broadcasting stroke:", err));
             })
             .catch(error => console.error('Error saving stroke:', error));
     }
 
+
     // Undo functionality
     function undo() {
         fetch('/api/drawing/undo', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
         })
             .then(response => response.json())
             .then(data => {
-                if (data.drawing) {
-                    // Load the previous drawing (if any)
-                    loadLatestDrawing();
-                }
                 console.log(data.message);
+                if (data.drawing) {
+                    strokes.pop(); // Remove last stroke from the local array
+
+                    // Clear canvas and redraw only the remaining strokes
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    strokes.forEach(renderStroke);
+                }
             })
             .catch(error => console.error('Error undoing drawing:', error));
     }
 
+    
     // Redo functionality
     function redo() {
         fetch('/api/drawing/redo', {
@@ -198,22 +205,30 @@
         fetch('/api/drawing/latest')
             .then(response => response.json())
             .then(data => {
-                console.log("Received drawings from backend:", data); // Log the received data
+                console.log("Ontvangen tekeningen van backend:", data); // Debugging
+
                 if (data && data.length > 0) {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    // Sorteer op CreatedAt in oplopende volgorde (oudste eerst, nieuwste laatst)
+                    data.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
                     data.forEach(drawing => {
-                        const stroke = JSON.parse(drawing.geoJSON); // Parse the GeoJSON string
+                        const stroke = JSON.parse(drawing.geoJSON);
                         renderStroke(stroke);
                     });
                 }
             })
-            .catch(error => console.error('Error loading drawings:', error));
+            .catch(error => console.error('Fout bij het laden van tekeningen:', error));
     }
 
     // Render a stroke on the canvas
     function renderStroke(stroke) {
-        console.log("Rendering stroke:", stroke); // Log the stroke being rendered
-        ctx.strokeStyle = stroke.properties.color;
+        console.log("Rendering stroke:", stroke); // Debugging log
+
+        ctx.save(); // Save the current drawing state
+
+        ctx.strokeStyle = stroke.properties.color; // Use the stroke's color only for this stroke
         ctx.lineWidth = stroke.properties.lineWidth;
         ctx.beginPath();
 
@@ -227,6 +242,7 @@
         });
 
         ctx.stroke();
+        ctx.restore(); // Restore previous state so the user's color is not changed
     }
 
     loadLatestDrawing(); // Load the latest drawings on page load

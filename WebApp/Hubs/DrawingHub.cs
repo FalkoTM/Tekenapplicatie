@@ -1,14 +1,20 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using System.Threading.Tasks;
 
-namespace WebApp.Hubs
+public class DrawingHub : Hub
 {
-    public class DrawingHub : Hub
+    public async Task SendStroke(string strokeJson)
     {
-        public async Task SendStroke(string strokeJson)
-        {
-            // Broadcast the stroke to all connected clients
-            await Clients.All.SendAsync("ReceiveStroke", strokeJson);
-        }
+        await Clients.Others.SendAsync("ReceiveStroke", strokeJson);
+    }
+
+    public async Task UndoDrawing()
+    {
+        await Clients.Others.SendAsync("ReceiveUndo");
+    }
+
+    public async Task RedoDrawing()
+    {
+        await Clients.Others.SendAsync("ReceiveRedo");
     }
 }
