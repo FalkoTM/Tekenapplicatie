@@ -71,10 +71,19 @@ namespace WebApp.Controllers
                     return BadRequest("GeoJSON data is required.");
                 }
 
-                // Log the incoming drawing data
-                Console.WriteLine("Received drawing data:");
-                Console.WriteLine($"GeoJSON: {drawing.GeoJSON}");
-                Console.WriteLine($"UserId: {drawing.UserId}");
+                // Retrieve the username from the session
+                var username = HttpContext.Session.GetString("Username");
+
+                if (string.IsNullOrEmpty(username))
+                {
+                    return Unauthorized("User not authenticated.");
+                }
+
+                // Set the UserId from the session
+                drawing.UserId = username;
+
+                // Clear all entries in the DeletedDrawings table
+                await _context.DeletedDrawings.ExecuteDeleteAsync();
 
                 // Save the new drawing
                 _context.Drawings.Add(drawing);

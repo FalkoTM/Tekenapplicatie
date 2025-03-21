@@ -6,11 +6,15 @@
     let isPainting = false;
     let lineWidth = 5;
     let strokes = []; // Store drawn strokes
-    
+
     // Initialize SignalR connection
     const connection = new signalR.HubConnectionBuilder()
         .withUrl("/drawingHub")
         .build();
+
+    // Retrieve the username from the server
+    const username = "@username";
+    console.log("Logged in as:", username);
 
     // Start the SignalR connection
     connection.start()
@@ -19,11 +23,12 @@
 
     // Listen for incoming strokes
     connection.on("ReceiveStroke", (strokeJson) => {
+        console.log("Received stroke from another user:", strokeJson);
         const stroke = JSON.parse(strokeJson);
         renderStroke(stroke);
     });
 
-// Listen for undo notifications
+    // Listen for undo notifications
     connection.on("ReceiveUndo", () => {
         console.log("Received undo notification");
 
@@ -43,12 +48,11 @@
         loadLatestDrawing(); // Reload the latest drawings
     });
 
-    // Store the current stroke as a GeoJSON object
+// Store the current stroke as a GeoJSON object
     let currentStroke = {
         type: "Feature",
         properties: {
-            userId: username, // Use the username from the query parameter
-            color: ctx.strokeStyle,
+            color: ctx.strokeStyle, // Only store color and line width
             lineWidth: ctx.lineWidth
         },
         geometry: {
@@ -56,32 +60,32 @@
             coordinates: [] // Array of [x, y] coordinates
         }
     };
-    
+
     // Function to resize the canvas
     function resizeCanvas() {
-        // Bewaar huidige kleur en lijnbreedte
+        // Save current color and line width
         const currentStrokeStyle = ctx.strokeStyle;
         const currentLineWidth = ctx.lineWidth;
 
-        // Sla de huidige afbeelding op
+        // Save the current image
         const imageData = canvas.toDataURL();
 
-        // Pas de grootte van het canvas aan
+        // Resize the canvas
         canvas.width = window.innerWidth - toolbar.offsetWidth;
         canvas.height = window.innerHeight;
 
-        // Herstel de kleur en lijnbreedte
+        // Restore the color and line width
         ctx.strokeStyle = currentStrokeStyle;
         ctx.lineWidth = currentLineWidth;
 
-        // Herstel de getekende inhoud
+        // Restore the drawn content
         const img = new Image();
         img.src = imageData;
         img.onload = () => {
             ctx.drawImage(img, 0, 0);
         };
     }
-    
+
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
@@ -118,16 +122,15 @@
     canvas.addEventListener('mousedown', (e) => {
         isPainting = true;
         ctx.beginPath();
-        ctx.lineWidth = lineWidth;  // Zorg ervoor dat de lijnbreedte correct is ingesteld
+        ctx.lineWidth = lineWidth;  // Ensure the line width is set correctly
         ctx.moveTo(e.clientX - toolbar.offsetWidth, e.clientY);
 
-        // Maak een nieuw GeoJSON-object met de juiste instellingen
+        // Create a new GeoJSON object with the correct settings
         currentStroke = {
             type: "Feature",
             properties: {
-                userId: "user123",
                 color: ctx.strokeStyle,
-                lineWidth: lineWidth // Gebruik de juiste lijnbreedte
+                lineWidth: lineWidth // Use the correct line width
             },
             geometry: {
                 type: "LineString",
@@ -139,11 +142,10 @@
     canvas.addEventListener('mouseup', () => {
         if (isPainting) {
             isPainting = false;
-            saveStroke(currentStroke); // Save the stroke as GeoJSON
+            saveStroke(currentStroke);
             currentStroke = {
                 type: "Feature",
                 properties: {
-                    userId: "user123", // Replace with the actual user ID
                     color: ctx.strokeStyle,
                     lineWidth: ctx.lineWidth
                 },
@@ -159,7 +161,7 @@
 
     // Save stroke to the database and broadcast via SignalR
     function saveStroke(stroke) {
-        strokes.push(stroke); 
+        strokes.push(stroke);
 
         const drawingData = {
             GeoJSON: JSON.stringify(stroke),
@@ -173,12 +175,12 @@
         })
             .then(response => response.json())
             .then(() => {
+                // Broadcast the stroke to other clients via SignalR
                 connection.invoke("SendStroke", drawingData.GeoJSON)
                     .catch(err => console.error("Error broadcasting stroke:", err));
             })
             .catch(error => console.error('Error saving stroke:', error));
     }
-
 
     // Undo functionality
     function undo() {

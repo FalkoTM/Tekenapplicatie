@@ -2,5 +2,13 @@
     ViewData["Title"] = "Home";
 }
 <h1>Welkom bij Tekentovenaar</h1>
-<a class="btn btn-primary" href="/Canvas?username=user1">Naar het canvas (user1)</a>
-<a class="btn btn-primary" href="/Canvas?username=user2">Naar het canvas (user2)</a>
+
+<form method="post" action="/Home/SetUser">
+    <input type="hidden" name="username" value="user1" />
+    <button type="submit" class="btn btn-primary">Naar het canvas (user1)</button>
+</form>
+
+<form method="post" action="/Home/SetUser">
+    <input type="hidden" name="username" value="user2" />
+    <button type="submit" class="btn btn-primary">Naar het canvas (user2)</button>
+</form>

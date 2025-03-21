@@ -1,15 +1,13 @@
 ﻿@{
-    var username = Context.Request.Query["username"].ToString();
+    ViewData["Title"] = "Canvas";
+    var username = ViewData["Username"]?.ToString();
 }
 
-
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="~/css/site.css">
-    <title>Drawing App</title>
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="~/css/site.css" />
 </head>
 <body>
 <section class="container">
@@ -23,17 +21,13 @@
         <button id="undo">Undo</button>
         <button id="redo">Redo</button>
     </div>
-    
+
     <div class="drawing-board">
         <canvas id="drawing-board"></canvas>
     </div>
 
-    <script>
-        // Retrieve the username from the query parameter
-        const username = "@username";
-        console.log("Logged in as:", username);
-    </script>
+    <script src="~/js/signalr/dist/browser/signalr.js"></script>
+    <script src="~/js/canvas.js"></script>
 </section>
-<script src="~/js/site.js"></script>
 </body>
 </html>
