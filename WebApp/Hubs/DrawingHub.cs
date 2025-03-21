@@ -3,17 +3,17 @@ using System.Threading.Tasks;
 
 public class DrawingHub : Hub
 {
-    public async Task SendStroke(string strokeJson)
+    public async Task SendStroke(string strokeJson, string username)
     {
-        await Clients.Others.SendAsync("ReceiveStroke", strokeJson);
+        await Clients.Others.SendAsync("ReceiveStroke", strokeJson, username);
     }
 
-    public async Task UndoDrawing()
+    public async Task NotifyUndo()
     {
         await Clients.Others.SendAsync("ReceiveUndo");
     }
 
-    public async Task RedoDrawing()
+    public async Task NotifyRedo()
     {
         await Clients.Others.SendAsync("ReceiveRedo");
     }

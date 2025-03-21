@@ -5,6 +5,7 @@ using WebApp.Models;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
+using Microsoft.AspNetCore.SignalR;
 
 namespace WebApp.Controllers
 {
@@ -13,11 +14,13 @@ namespace WebApp.Controllers
     public class DrawingController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IHubContext<DrawingHub> _hubContext;
         private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1); // Thread-safe lock
 
-        public DrawingController(ApplicationDbContext context)
+        public DrawingController(ApplicationDbContext context, IHubContext<DrawingHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         // Helper function to ensure no more than 2000 items in the Drawings table
@@ -39,10 +42,10 @@ namespace WebApp.Controllers
         }
 
         // Helper function to ensure no more than 2000 items in the DeletedDrawings table
-        private async Task EnsureDeletedDrawingsLimit(int drawinglimit)
+        private async Task EnsureDeletedDrawingsLimit(int drawingLimit)
         {
             var totalDeletedDrawings = await _context.DeletedDrawings.CountAsync();
-            if (totalDeletedDrawings > drawinglimit)
+            if (totalDeletedDrawings > drawingLimit)
             {
                 var oldestDeletedDrawing = await _context.DeletedDrawings
                     .OrderBy(d => d.DeletedAt)
@@ -68,19 +71,23 @@ namespace WebApp.Controllers
                     return BadRequest("GeoJSON data is required.");
                 }
 
-                // **NEW: Delete all old undone drawings when a new one is made**
-                await _context.DeletedDrawings.ExecuteDeleteAsync(); 
+                // Log the incoming drawing data
+                Console.WriteLine("Received drawing data:");
+                Console.WriteLine($"GeoJSON: {drawing.GeoJSON}");
+                Console.WriteLine($"UserId: {drawing.UserId}");
 
                 // Save the new drawing
                 _context.Drawings.Add(drawing);
                 await _context.SaveChangesAsync();
 
                 await EnsureDrawingsLimit(2000);
-                
+
                 return Ok(new { message = "Drawing saved successfully!" });
             }
             catch (Exception ex)
             {
+                // Log the exception
+                Console.WriteLine($"Error saving drawing: {ex.Message}");
                 return StatusCode(500, $"An error occurred: {ex.Message}");
             }
             finally
@@ -108,6 +115,7 @@ namespace WebApp.Controllers
                 var deletedDrawing = new DeletedDrawingModel
                 {
                     GeoJSON = latestDrawing.GeoJSON,
+                    UserId = latestDrawing.UserId, // Include the UserId
                     CreatedAt = latestDrawing.CreatedAt,
                     DeletedAt = DateTime.UtcNow
                 };
@@ -117,7 +125,10 @@ namespace WebApp.Controllers
                 await _context.SaveChangesAsync();
 
                 await EnsureDeletedDrawingsLimit(2000);
-                
+
+                // Notify all clients to update their canvas
+                await _hubContext.Clients.All.SendAsync("ReceiveUndo");
+
                 return Ok(new { message = "Last drawing undone successfully!", drawing = deletedDrawing });
             }
             finally
@@ -144,6 +155,7 @@ namespace WebApp.Controllers
                 var redoDrawing = new DrawingModel
                 {
                     GeoJSON = latestDeletedDrawing.GeoJSON,
+                    UserId = latestDeletedDrawing.UserId, // Include the UserId
                     CreatedAt = latestDeletedDrawing.CreatedAt
                 };
 
@@ -152,7 +164,10 @@ namespace WebApp.Controllers
                 await _context.SaveChangesAsync();
 
                 await EnsureDrawingsLimit(2000);
-                
+
+                // Notify all clients to update their canvas
+                await _hubContext.Clients.All.SendAsync("ReceiveRedo");
+
                 return Ok(new { message = "Drawing redone successfully!", drawing = redoDrawing });
             }
             finally

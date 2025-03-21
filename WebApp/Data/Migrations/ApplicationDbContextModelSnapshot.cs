@@ -17,7 +17,7 @@ namespace WebApp.Data.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.10");
 
-            modelBuilder.Entity("WebApp.Models.DeletedDrawingModel", b =>
+            modelBuilder.Entity("DeletedDrawingModel", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -33,12 +33,16 @@ namespace WebApp.Data.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.ToTable("DeletedDrawings");
                 });
 
-            modelBuilder.Entity("WebApp.Models.DrawingModel", b =>
+            modelBuilder.Entity("DrawingModel", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -48,6 +52,10 @@ namespace WebApp.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("GeoJSON")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("TEXT");
 

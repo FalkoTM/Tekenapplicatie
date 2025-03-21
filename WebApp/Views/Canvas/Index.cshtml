@@ -1,4 +1,9 @@
-﻿<html lang="en">
+﻿@{
+    var username = Context.Request.Query["username"].ToString();
+}
+
+
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -18,9 +23,16 @@
         <button id="undo">Undo</button>
         <button id="redo">Redo</button>
     </div>
+    
     <div class="drawing-board">
         <canvas id="drawing-board"></canvas>
     </div>
+
+    <script>
+        // Retrieve the username from the query parameter
+        const username = "@username";
+        console.log("Logged in as:", username);
+    </script>
 </section>
 <script src="~/js/site.js"></script>
 </body>

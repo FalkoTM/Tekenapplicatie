@@ -6,7 +6,7 @@
     let isPainting = false;
     let lineWidth = 5;
     let strokes = []; // Store drawn strokes
-
+    
     // Initialize SignalR connection
     const connection = new signalR.HubConnectionBuilder()
         .withUrl("/drawingHub")
@@ -23,11 +23,31 @@
         renderStroke(stroke);
     });
 
+// Listen for undo notifications
+    connection.on("ReceiveUndo", () => {
+        console.log("Received undo notification");
+
+        // Clear the local strokes array
+        strokes = [];
+
+        // Clear the canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Reload the latest drawings
+        loadLatestDrawing();
+    });
+
+    // Listen for redo notifications
+    connection.on("ReceiveRedo", () => {
+        console.log("Received redo notification");
+        loadLatestDrawing(); // Reload the latest drawings
+    });
+
     // Store the current stroke as a GeoJSON object
     let currentStroke = {
         type: "Feature",
         properties: {
-            userId: "user123", // Replace with the actual user ID
+            userId: username, // Use the username from the query parameter
             color: ctx.strokeStyle,
             lineWidth: ctx.lineWidth
         },
@@ -61,8 +81,7 @@
             ctx.drawImage(img, 0, 0);
         };
     }
-
-
+    
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
@@ -70,7 +89,6 @@
     toolbar.addEventListener('click', e => {
         if (e.target.id === 'clear') {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            saveDrawing();
         } else if (e.target.id === 'undo') {
             undo();
         } else if (e.target.id === 'redo') {
@@ -118,7 +136,6 @@
         };
     });
 
-
     canvas.addEventListener('mouseup', () => {
         if (isPainting) {
             isPainting = false;
@@ -142,9 +159,12 @@
 
     // Save stroke to the database and broadcast via SignalR
     function saveStroke(stroke) {
-        strokes.push(stroke); // Store the stroke locally
+        strokes.push(stroke); 
 
-        const drawingData = { GeoJSON: JSON.stringify(stroke) };
+        const drawingData = {
+            GeoJSON: JSON.stringify(stroke),
+            UserId: username
+        };
 
         fetch('/api/drawing/save', {
             method: 'POST',
@@ -175,25 +195,30 @@
                     // Clear canvas and redraw only the remaining strokes
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     strokes.forEach(renderStroke);
+
+                    // Notify other clients to update their canvas
+                    connection.invoke("NotifyUndo")
+                        .catch(err => console.error("Error notifying undo:", err));
                 }
             })
             .catch(error => console.error('Error undoing drawing:', error));
     }
 
-    
     // Redo functionality
     function redo() {
         fetch('/api/drawing/redo', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
         })
             .then(response => response.json())
             .then(data => {
                 if (data.drawing) {
                     // Load the redone drawing
                     loadLatestDrawing();
+
+                    // Notify other clients to update their canvas
+                    connection.invoke("NotifyRedo")
+                        .catch(err => console.error("Error notifying redo:", err));
                 }
                 console.log(data.message);
             })
@@ -205,30 +230,36 @@
         fetch('/api/drawing/latest')
             .then(response => response.json())
             .then(data => {
-                console.log("Ontvangen tekeningen van backend:", data); // Debugging
+                console.log("Received drawings from backend:", data);
 
                 if (data && data.length > 0) {
+                    // Clear the local strokes array
+                    strokes = [];
+
+                    // Clear the canvas
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                    // Sorteer op CreatedAt in oplopende volgorde (oudste eerst, nieuwste laatst)
+                    // Sort by CreatedAt in ascending order (oldest first, newest last)
                     data.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
+                    // Update the strokes array and render each stroke
                     data.forEach(drawing => {
                         const stroke = JSON.parse(drawing.geoJSON);
-                        renderStroke(stroke);
+                        strokes.push(stroke); // Add to the local strokes array
+                        renderStroke(stroke); // Render the stroke on the canvas
                     });
                 }
             })
-            .catch(error => console.error('Fout bij het laden van tekeningen:', error));
+            .catch(error => console.error('Error loading drawings:', error));
     }
 
     // Render a stroke on the canvas
     function renderStroke(stroke) {
-        console.log("Rendering stroke:", stroke); // Debugging log
+        console.log("Rendering stroke by user:", stroke.properties.userId);
 
         ctx.save(); // Save the current drawing state
 
-        ctx.strokeStyle = stroke.properties.color; // Use the stroke's color only for this stroke
+        ctx.strokeStyle = stroke.properties.color;
         ctx.lineWidth = stroke.properties.lineWidth;
         ctx.beginPath();
 
@@ -242,7 +273,7 @@
         });
 
         ctx.stroke();
-        ctx.restore(); // Restore previous state so the user's color is not changed
+        ctx.restore();
     }
 
     loadLatestDrawing(); // Load the latest drawings on page load
