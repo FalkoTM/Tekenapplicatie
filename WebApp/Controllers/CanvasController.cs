@@ -1,21 +1,15 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace WebApp.Controllers
 {
+    [Authorize] // Only allow authenticated users
     public class CanvasController : Controller
     {
         public IActionResult Index()
         {
-            // Retrieve the username from the session
-            var username = HttpContext.Session.GetString("Username");
-
-            if (string.IsNullOrEmpty(username))
-            {
-                // If no username is set, redirect to the home page
-                return RedirectToAction("Index", "Home");
-            }
-
-            // Pass the username to the view
+            // Get the current user's username
+            var username = User.Identity.Name;
             ViewData["Username"] = username;
             return View();
         }

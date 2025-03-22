@@ -1,14 +1,25 @@
-﻿@{
+﻿@using Microsoft.AspNetCore.Identity
+@inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<IdentityUser> UserManager
+
+@{
     ViewData["Title"] = "Home";
 }
+
 <h1>Welkom bij Tekentovenaar</h1>
 
-<form method="post" action="/Home/SetUser">
-    <input type="hidden" name="username" value="user1" />
-    <button type="submit" class="btn btn-primary">Naar het canvas (user1)</button>
-</form>
+@if (SignInManager.IsSignedIn(User))
+{
+    <p>You are logged in as: @User.Identity.Name</p>
+    <a asp-controller="Canvas" asp-action="Index" class="btn btn-primary">Go to Canvas</a>
 
-<form method="post" action="/Home/SetUser">
-    <input type="hidden" name="username" value="user2" />
-    <button type="submit" class="btn btn-primary">Naar het canvas (user2)</button>
-</form>
+    <form asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home")" method="post" class="form-inline">
+        <button type="submit" class="btn btn-link">Logout</button>
+    </form>
+}
+else
+{
+    <p>Please log in to access the canvas.</p>
+    <a asp-area="Identity" asp-page="/Account/Login" class="btn btn-primary">Login</a>
+    <a asp-area="Identity" asp-page="/Account/Register" class="btn btn-secondary">Register</a>
+}

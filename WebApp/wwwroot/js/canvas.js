@@ -13,7 +13,7 @@
         .build();
 
     // Retrieve the username from the server
-    const username = "@username";
+    const username = "@User.Identity.Name";
     console.log("Logged in as:", username);
 
     // Start the SignalR connection

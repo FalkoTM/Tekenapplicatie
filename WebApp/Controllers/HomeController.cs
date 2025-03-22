@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebApp.Controllers
@@ -9,13 +10,10 @@ namespace WebApp.Controllers
             return View();
         }
 
-        [HttpPost]
-        public IActionResult SetUser(string username)
+        [Authorize] // Only allow authenticated users
+        public IActionResult Canvas()
         {
-            // Store the username in the session
-            HttpContext.Session.SetString("Username", username);
-
-            // Redirect to the Canvas controller's Index action
+            // Redirect to the CanvasController's Index action
             return RedirectToAction("Index", "Canvas");
         }
     }
